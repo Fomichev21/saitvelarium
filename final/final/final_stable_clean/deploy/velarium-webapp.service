@@ -1,0 +1,15 @@
+[Unit]
+Description=Velarium VPN web cabinet (FastAPI Mini App)
+After=network.target
+
+[Service]
+Type=simple
+User=velarium
+WorkingDirectory=/opt/velarium/final_stable_clean
+EnvironmentFile=/opt/velarium/final_stable_clean/.env
+ExecStart=/opt/velarium/final_stable_clean/.venv/bin/uvicorn webapp_main:app --host 127.0.0.1 --port 8182
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

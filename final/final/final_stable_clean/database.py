@@ -3,6 +3,7 @@ from __future__ import annotations
 import sqlite3
 from contextlib import closing
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Any
 
 from config import DATABASE_PATH, ROLE_ADMIN, ROLE_OWNER, TARIFFS, settings
@@ -229,6 +230,22 @@ def _ensure_referrals_table(conn: sqlite3.Connection) -> None:
     )
 
 
+def _ensure_support_messages_table(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS support_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            sender TEXT NOT NULL,
+            text TEXT NOT NULL,
+            admin_id INTEGER,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id) REFERENCES users(user_id)
+        )
+        """
+    )
+
+
 def init_db() -> None:
     with closing(connect()) as conn:
         _ensure_users_table(conn)
@@ -238,6 +255,7 @@ def init_db() -> None:
         _ensure_payments_table(conn)
         _ensure_vpn_keys_table(conn)
         _ensure_referrals_table(conn)
+        _ensure_support_messages_table(conn)
         conn.commit()
 
     if settings.owner_id:
@@ -682,6 +700,18 @@ def get_stats() -> dict[str, int]:
     }
 
 
+def create_backup_copy(destination: Path | str) -> Path:
+    """Create a consistent snapshot of the database using sqlite3's backup API.
+
+    Safe to call while the bot is writing to the live database — unlike copying
+    the raw .sqlite3 file, this can't produce a torn/corrupt snapshot.
+    """
+    destination = Path(destination)
+    with closing(connect()) as source, closing(sqlite3.connect(destination)) as dest:
+        source.backup(dest)
+    return destination
+
+
 def create_payment(
     payment_id: str,
     user_id: int,
@@ -1000,6 +1030,57 @@ def reset_subscription(user_id: int) -> dict[str, Any]:
     }
 
 
+def adjust_subscription_days(user_id: int, days: int) -> dict[str, Any]:
+    """Extend (days > 0) or shorten (days < 0) a subscription, keeping Remnawave in sync.
+
+    If the adjustment pushes the expiry into the past, this fully revokes access
+    (same as reset_subscription) instead of leaving a stale past timestamp, so an
+    admin shortening a subscription cuts VPN access immediately rather than only
+    changing the displayed date.
+    """
+    user = get_user(user_id)
+    current_value = str(user.get("subscription_until") or "").strip()
+    current_dt = None
+    if current_value:
+        try:
+            current_dt = datetime.fromisoformat(current_value)
+        except ValueError:
+            current_dt = None
+
+    base_dt = current_dt if current_dt else datetime.utcnow()
+    new_dt = (base_dt + timedelta(days=days)).replace(microsecond=0)
+
+    if new_dt <= datetime.utcnow():
+        return reset_subscription(user_id)
+
+    expire_at = new_dt.isoformat(sep=" ")
+    vpn_key = get_vpn_key(user_id)
+    remote_user_uuid = str(vpn_key.get("vpn_key") or "") if vpn_key else ""
+
+    if is_remnawave_configured() and remote_user_uuid and _looks_like_uuid(remote_user_uuid):
+        client = RemnawaveClient()
+        try:
+            client.update_user(
+                remote_user_uuid,
+                expire_at=expire_at,
+                user_id=user_id,
+                tariff_code="admin_adjust",
+                telegram_username=user.get("username"),
+                first_name=user.get("first_name"),
+                last_name=user.get("last_name"),
+            )
+        except RemnawaveError:
+            pass
+        finally:
+            client.close()
+
+    _set_subscription_until(user_id, expire_at)
+    if vpn_key:
+        save_vpn_key(user_id, str(vpn_key["vpn_key"]), str(vpn_key["config_text"]), expire_at)
+
+    return {"user": get_user(user_id), "removed_remote": False}
+
+
 def mark_payment_paid(payment_id: str, reviewed_by: int | None = None) -> dict[str, Any] | None:
     payment = get_payment(payment_id)
     if not payment:
@@ -1094,6 +1175,71 @@ def get_referral_stats(user_id: int) -> dict[str, Any]:
             (user_id,),
         ).fetchone()["count"]
     return {"total": int(total), "rewarded": int(rewarded)}
+
+
+def add_support_message(
+    user_id: int, sender: str, text: str, admin_id: int | None = None
+) -> dict[str, Any]:
+    with closing(connect()) as conn:
+        cursor = conn.execute(
+            """
+            INSERT INTO support_messages (user_id, sender, text, admin_id)
+            VALUES (?, ?, ?, ?)
+            """,
+            (user_id, sender, text, admin_id),
+        )
+        conn.commit()
+        row = conn.execute(
+            "SELECT * FROM support_messages WHERE id = ?", (cursor.lastrowid,)
+        ).fetchone()
+    return dict(row)
+
+
+def list_support_messages(user_id: int, limit: int = 200) -> list[dict[str, Any]]:
+    with closing(connect()) as conn:
+        rows = conn.execute(
+            """
+            SELECT * FROM support_messages
+            WHERE user_id = ?
+            ORDER BY id ASC
+            LIMIT ?
+            """,
+            (user_id, limit),
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def list_support_threads(limit: int = 50) -> list[dict[str, Any]]:
+    with closing(connect()) as conn:
+        thread_rows = conn.execute(
+            """
+            SELECT sm.user_id AS user_id, MAX(sm.id) AS last_id
+            FROM support_messages sm
+            GROUP BY sm.user_id
+            ORDER BY last_id DESC
+            LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+
+        threads = []
+        for row in thread_rows:
+            last_message = conn.execute(
+                "SELECT * FROM support_messages WHERE id = ?", (row["last_id"],)
+            ).fetchone()
+            user = conn.execute(
+                "SELECT username, first_name FROM users WHERE user_id = ?",
+                (row["user_id"],),
+            ).fetchone()
+            threads.append(
+                {
+                    "user_id": row["user_id"],
+                    "username": user["username"] if user else None,
+                    "first_name": user["first_name"] if user else None,
+                    "last_message": dict(last_message) if last_message else None,
+                }
+            )
+    return threads
 
 
 def list_users_expiring_soon(within_hours: int = 24) -> list[dict[str, Any]]:

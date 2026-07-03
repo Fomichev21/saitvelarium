@@ -1,0 +1,22 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "webapp",
+      "runtimeExecutable": "C:\\Users\\Arseny\\Desktop\\Velarium saut\\final\\final\\final_stable_clean\\.venv\\Scripts\\python.exe",
+      "runtimeArgs": [
+        "-m",
+        "uvicorn",
+        "webapp_main:app",
+        "--reload",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "8183",
+        "--app-dir",
+        "C:\\Users\\Arseny\\Desktop\\Velarium saut\\final\\final\\final_stable_clean"
+      ],
+      "port": 8183
+    }
+  ]
+}

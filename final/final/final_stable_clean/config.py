@@ -42,6 +42,8 @@ PAYMENT_STATUSES = {
     "failed": "Ошибка",
 }
 
+REFERRAL_BONUS_DAYS = 3
+
 TARIFFS = {
     "month": {
         "title": "1 месяц",
@@ -100,23 +102,27 @@ _load_dotenv()
 
 @dataclass(frozen=True)
 class Settings:
-    bot_token: str = os.getenv("BOT_TOKEN", "8646213810:AAFBgdufxXg-gTFbQBaLEY8i9JZkkv7gz6I")
+    bot_token: str = os.getenv("BOT_TOKEN", "")
     telegram_proxy: str = os.getenv("TELEGRAM_PROXY", "").strip()
-    owner_id: int = _to_int("OWNER_ID", 1779714149)
-    support_username: str = os.getenv("SUPPORT_USERNAME", "Fomamai")
+    owner_id: int = _to_int("OWNER_ID", 0)
+    support_username: str = os.getenv("SUPPORT_USERNAME", "")
     trial_channel_username: str = os.getenv("TRIAL_CHANNEL_USERNAME", "VelariumVPNchannel").lstrip("@")
     public_base_url: str = _normalize_base_url(os.getenv("PUBLIC_BASE_URL", ""))
     payment_provider: str = os.getenv("PAYMENT_PROVIDER", "manual_sbp")
-    manual_payment_url: str = os.getenv(
-        "MANUAL_PAYMENT_URL",
-        "https://finance.ozon.ru/apps/sbp/ozonbankpay/019d979e-fb01-71ef-8625-7f52d022d8ea",
-    ).strip()
+    manual_payment_url: str = os.getenv("MANUAL_PAYMENT_URL", "").strip()
     payment_invoice_prefix: str = os.getenv("PAYMENT_INVOICE_PREFIX", "AT").strip() or "AT"
+    platego_merchant_id: str = os.getenv("PLATEGO_MERCHANT_ID", "").strip()
+    platego_api_key: str = os.getenv("PLATEGO_API_KEY", "").strip()
     app_secret_key: str = os.getenv("APP_SECRET_KEY", "change-me-in-production")
-    admin_password: str = os.getenv("ADMIN_PASSWORD", "admin123")
+    admin_password: str = os.getenv("ADMIN_PASSWORD", "")
     admin_password_hash: str = os.getenv("ADMIN_PASSWORD_HASH", "")
     web_host: str = os.getenv("WEB_HOST", "127.0.0.1")
     web_port: int = _to_int("WEB_PORT", 5000)
+
+    bot_username: str = os.getenv("BOT_USERNAME", "").lstrip("@")
+    webapp_public_url: str = os.getenv("WEBAPP_PUBLIC_URL", "").strip()
+    webapp_session_ttl_seconds: int = _to_int("WEBAPP_SESSION_TTL_SECONDS", 3600)
+    webapp_init_data_max_age_seconds: int = _to_int("WEBAPP_INIT_DATA_MAX_AGE_SECONDS", 86400)
 
     wireguard_endpoint: str = os.getenv("WG_ENDPOINT", "vpn.example.com:51820")
     wireguard_public_key: str = os.getenv("WG_SERVER_PUBLIC_KEY", "SET_REAL_PUBLIC_KEY")

@@ -10,9 +10,10 @@ from aiogram.types import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     Message,
+    WebAppInfo,
 )
 
-from config import PAYMENT_STATUSES, ROLE_ADMIN, TARIFFS, settings
+from config import PAYMENT_STATUSES, REFERRAL_BONUS_DAYS, ROLE_ADMIN, TARIFFS, settings
 from database import (
     add_user,
     activate_trial_days,
@@ -64,6 +65,11 @@ def main_menu(user_id: int) -> InlineKeyboardMarkup:
     ]
     if role >= ROLE_ADMIN:
         rows.insert(3, [InlineKeyboardButton(text="⚙️ Админка", callback_data="open_admin")])
+    if settings.webapp_public_url:
+        rows.insert(
+            0,
+            [InlineKeyboardButton(text="🌐 Личный кабинет", web_app=WebAppInfo(url=settings.webapp_public_url))],
+        )
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
@@ -199,7 +205,7 @@ async def ref_cmd(message: Message) -> None:
 
     await message.answer(
         "👥 Реферальная программа\n\n"
-        f"Приглашай друзей — за каждого, кто сделает первую оплату, ты получишь +7 дней к подписке.\n\n"
+        f"Приглашай друзей — за каждого, кто сделает первую оплату, ты получишь +{REFERRAL_BONUS_DAYS} дня к подписке.\n\n"
         f"Твоя ссылка:\n{link}\n\n"
         f"Приглашено: {stats['total']}\n"
         f"Оплатили (бонус получен): {stats['rewarded']}",

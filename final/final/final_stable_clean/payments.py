@@ -26,14 +26,30 @@ from database import (
 def create_payment_for_tariff(user_id: int, tariff_code: str) -> dict[str, str | int]:
     tariff = TARIFFS[tariff_code]
     payment_id = str(uuid.uuid4())
+
     pay_url = settings.manual_payment_url
+    provider = settings.payment_provider
+    if settings.platego_merchant_id and settings.platego_api_key:
+        try:
+            from platego import create_platego_payment
+
+            result = create_platego_payment(
+                amount=tariff["price"],
+                order_id=payment_id,
+                description=f"VPN подписка — {tariff['title']}",
+            )
+            if result and result.get("url"):
+                pay_url = result["url"]
+                provider = "platego"
+        except Exception as e:
+            print(f"Platego error, falling back to manual: {e}")
 
     invoice_seq = create_payment(
         payment_id=payment_id,
         user_id=user_id,
         amount=tariff["price"],
         tariff_code=tariff_code,
-        provider=settings.payment_provider,
+        provider=provider,
         payment_url=pay_url,
     )
 
@@ -147,6 +163,14 @@ def build_admin_payment_markup(payment_id: str) -> InlineKeyboardMarkup:
     )
 
 
+def build_admin_remind_markup(payment_id: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="🔔 Напомнить пользователю", callback_data=f"remind_payment:{payment_id}")]
+        ]
+    )
+
+
 async def notify_admins_about_payment(bot: Bot, payment_id: str) -> int:
     payment = get_payment(payment_id)
     if not payment:
@@ -159,18 +183,23 @@ async def notify_admins_about_payment(bot: Bot, payment_id: str) -> int:
     if not admin_ids:
         return 0
 
+    is_platego = payment.get("provider") == "platego"
     text = (
-        "Новый счёт ожидает проверки.\n\n"
+        ("⏳ Новый платёж\n" if is_platego else "Новый счёт ожидает проверки.\n") + "\n"
         f"Счёт: {payment['invoice_code'] or payment['id']}\n"
         f"ID платежа: {payment['id']}\n"
         f"Пользователь: {payment['user_id']}\n"
         f"Тариф: {TARIFFS[payment['tariff_code']]['title']}\n"
         f"Сумма: {payment['amount']} ₽\n"
-        f"Ссылка на оплату:\n{payment['payment_url']}"
+        + (
+            "\nОжидаем оплату через Platego..."
+            if is_platego
+            else f"Ссылка на оплату:\n{payment['payment_url']}"
+        )
     )
 
     delivered = 0
-    markup = build_admin_payment_markup(payment_id)
+    markup = build_admin_remind_markup(payment_id) if is_platego else build_admin_payment_markup(payment_id)
     for admin_id in dict.fromkeys(admin_ids):
         try:
             await bot.send_message(admin_id, text, reply_markup=markup)

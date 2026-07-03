@@ -228,6 +228,13 @@ class RemnawaveClient:
             return bool(data.get("isDeleted"))
         return False
 
+    def get_nodes(self) -> list[dict[str, Any]]:
+        data = self._request("GET", "/nodes")
+        if isinstance(data, dict):
+            nodes = data.get("nodes") or []
+            return nodes if isinstance(nodes, list) else []
+        return data if isinstance(data, list) else []
+
 
 def build_panel_username(
     *,
@@ -317,3 +324,53 @@ def user_to_access(user: dict[str, Any]) -> RemnawaveAccess:
 def from_api_datetime(value: str) -> str:
     dt = parse_datetime(value)
     return dt.astimezone(timezone.utc).replace(tzinfo=None, microsecond=0).isoformat(sep=" ")
+
+
+def get_user_traffic(remote_user_uuid: str) -> dict[str, Any] | None:
+    """Fetch used/limit traffic for a single user. Returns None if Remnawave
+    isn't configured or the lookup fails, so callers can hide the usage bar
+    instead of showing bogus zeros."""
+    if not is_remnawave_configured() or not remote_user_uuid:
+        return None
+
+    client = RemnawaveClient()
+    try:
+        user = client.get_user_by_uuid(remote_user_uuid)
+    except RemnawaveError:
+        return None
+    finally:
+        client.close()
+
+    used = user.get("usedTrafficBytes")
+    limit = user.get("trafficLimitBytes")
+    if used is None:
+        return None
+
+    return {
+        "used_bytes": int(used),
+        "limit_bytes": int(limit) if limit else 0,
+    }
+
+
+def check_nodes_status() -> dict[str, Any] | None:
+    """Summarize node health for a status indicator. Returns None if Remnawave
+    isn't configured or the check fails, so callers can hide the indicator
+    instead of showing a false "broken" state."""
+    if not is_remnawave_configured():
+        return None
+
+    client = RemnawaveClient()
+    try:
+        nodes = client.get_nodes()
+    except RemnawaveError:
+        return None
+    finally:
+        client.close()
+
+    active_nodes = [n for n in nodes if not n.get("isDisabled")]
+    online_nodes = [n for n in active_nodes if n.get("isConnected")]
+    return {
+        "total": len(active_nodes),
+        "online": len(online_nodes),
+        "all_online": bool(active_nodes) and len(online_nodes) == len(active_nodes),
+    }

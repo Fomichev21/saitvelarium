@@ -1,0 +1,58 @@
+import { initTelegram } from "./telegram.js";
+import { ensureAuth, api } from "./api.js";
+import { createRouter } from "./router.js";
+import { toast } from "./ui.js";
+import { initSidebarToggle } from "./sidebar.js";
+import { renderHome } from "./pages/home.js";
+import { renderReferrals } from "./pages/referrals.js";
+import { renderSupport } from "./pages/support.js";
+import { renderProfile } from "./pages/profile.js";
+
+const main = document.getElementById("main");
+
+const routes = {
+  home: () => renderHome(main),
+  referrals: () => renderReferrals(main),
+  support: () => renderSupport(main),
+  profile: () => renderProfile(main),
+};
+
+function setActiveNav(route) {
+  document.querySelectorAll(".nav-item[data-route]").forEach((el) => {
+    el.classList.toggle("active", el.dataset.route === route);
+  });
+  document.querySelector(".sidebar-header")?.classList.toggle("no-avatar", route === "home");
+}
+
+document.querySelectorAll(".nav-item[data-route]").forEach((el) => {
+  el.addEventListener("click", () => {
+    window.location.hash = el.dataset.route;
+  });
+});
+
+const router = createRouter(routes, "home", setActiveNav);
+
+async function boot() {
+  initTelegram();
+  initSidebarToggle();
+  try {
+    await ensureAuth();
+  } catch (err) {
+    main.innerHTML = `<div class="center-loader">${err.message || "Открой это приложение через кнопку в Telegram-боте."}</div>`;
+    return;
+  }
+
+  const me = await api.get("/api/me").catch(() => null);
+  if (me && me.role >= 2) {
+    const slot = document.getElementById("admin-switch-slot");
+    if (slot) slot.innerHTML = `<a class="panel-switch" href="/admin">Админ-панель →</a>`;
+  }
+
+  try {
+    await router.render();
+  } catch (err) {
+    toast(err.message || "Ошибка загрузки");
+  }
+}
+
+boot();

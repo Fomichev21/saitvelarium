@@ -322,6 +322,32 @@ async def reject_payment(callback: CallbackQuery) -> None:
     )
 
 
+@router.callback_query(F.data.startswith("remind_payment:"))
+async def remind_payment(callback: CallbackQuery) -> None:
+    if not await _guard_admin(callback):
+        return
+
+    payment_id = callback.data.split(":", maxsplit=1)[1]
+    payment = get_payment(payment_id)
+    if not payment:
+        await callback.answer("Платёж не найден", show_alert=True)
+        return
+
+    try:
+        await callback.bot.send_message(
+            payment["user_id"],
+            "⏰ Напоминание об оплате\n\n"
+            f"У вас есть незавершённый платёж на сумму {payment['amount']} руб.\n\n"
+            "Завершите оплату, чтобы активировать подписку 👇",
+            reply_markup=InlineKeyboardMarkup(
+                inline_keyboard=[[InlineKeyboardButton(text="💳 Оплатить", url=payment["payment_url"])]]
+            ),
+        )
+        await callback.answer("Напоминание отправлено", show_alert=True)
+    except Exception:
+        await callback.answer("Не удалось отправить", show_alert=True)
+
+
 @router.callback_query(F.data == "adm_balance")
 async def balance_start(callback: CallbackQuery, state: FSMContext) -> None:
     if not await _guard_admin(callback):
