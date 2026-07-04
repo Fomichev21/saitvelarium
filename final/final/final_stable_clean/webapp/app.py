@@ -42,11 +42,11 @@ app.include_router(admin.router, prefix="/api/admin")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
-@app.get("/")
+@app.api_route("/", methods=["GET", "HEAD"])
 def index() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
 
 
-@app.get("/admin")
+@app.api_route("/admin", methods=["GET", "HEAD"])
 def admin_index() -> FileResponse:
     return FileResponse(STATIC_DIR / "admin.html")
