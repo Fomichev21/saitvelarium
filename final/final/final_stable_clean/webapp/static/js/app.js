@@ -62,6 +62,18 @@ async function boot() {
   if (me && me.role >= 2) {
     const slot = document.getElementById("admin-switch-slot");
     if (slot) slot.innerHTML = `<a class="panel-switch" href="/admin">Админ-панель →</a>`;
+
+    const bottomNav = document.querySelector(".bottom-nav");
+    if (bottomNav && !bottomNav.querySelector("#bottom-nav-admin")) {
+      const adminBtn = document.createElement("button");
+      adminBtn.className = "nav-item";
+      adminBtn.id = "bottom-nav-admin";
+      adminBtn.innerHTML = `<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V11M12 20V4M20 20v-7"/></svg><span>Админ</span>`;
+      adminBtn.addEventListener("click", () => {
+        window.location.href = "/admin";
+      });
+      bottomNav.appendChild(adminBtn);
+    }
   }
 
   try {
