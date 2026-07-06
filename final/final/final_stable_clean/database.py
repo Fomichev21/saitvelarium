@@ -239,11 +239,15 @@ def _ensure_support_messages_table(conn: sqlite3.Connection) -> None:
             sender TEXT NOT NULL,
             text TEXT NOT NULL,
             admin_id INTEGER,
+            is_read INTEGER NOT NULL DEFAULT 0,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(user_id) REFERENCES users(user_id)
         )
         """
     )
+    columns = {row["name"] for row in conn.execute("PRAGMA table_info(support_messages)").fetchall()}
+    if "is_read" not in columns:
+        conn.execute("ALTER TABLE support_messages ADD COLUMN is_read INTEGER NOT NULL DEFAULT 0")
 
 
 def init_db() -> None:
@@ -1231,15 +1235,47 @@ def list_support_threads(limit: int = 50) -> list[dict[str, Any]]:
                 "SELECT username, first_name FROM users WHERE user_id = ?",
                 (row["user_id"],),
             ).fetchone()
+            unread = conn.execute(
+                "SELECT COUNT(*) AS count FROM support_messages WHERE user_id = ? AND sender = 'user' AND is_read = 0",
+                (row["user_id"],),
+            ).fetchone()["count"]
             threads.append(
                 {
                     "user_id": row["user_id"],
                     "username": user["username"] if user else None,
                     "first_name": user["first_name"] if user else None,
                     "last_message": dict(last_message) if last_message else None,
+                    "unread_count": int(unread),
                 }
             )
     return threads
+
+
+def mark_support_messages_read(user_id: int, viewer: str) -> None:
+    sender_to_clear = "admin" if viewer == "user" else "user"
+    with closing(connect()) as conn:
+        conn.execute(
+            "UPDATE support_messages SET is_read = 1 WHERE user_id = ? AND sender = ?",
+            (user_id, sender_to_clear),
+        )
+        conn.commit()
+
+
+def count_unread_support_for_user(user_id: int) -> int:
+    with closing(connect()) as conn:
+        row = conn.execute(
+            "SELECT COUNT(*) AS count FROM support_messages WHERE user_id = ? AND sender = 'admin' AND is_read = 0",
+            (user_id,),
+        ).fetchone()
+    return int(row["count"])
+
+
+def count_unread_support_for_admin() -> int:
+    with closing(connect()) as conn:
+        row = conn.execute(
+            "SELECT COUNT(*) AS count FROM support_messages WHERE sender = 'user' AND is_read = 0"
+        ).fetchone()
+    return int(row["count"])
 
 
 def list_users_expiring_soon(within_hours: int = 24) -> list[dict[str, Any]]:

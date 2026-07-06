@@ -19,6 +19,19 @@ export const ICON_EDIT = svg('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0
 export const ICON_TRASH = svg('<path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>', 14);
 export const ICON_BAN = svg('<circle cx="12" cy="12" r="9"/><path d="m5 5 14 14"/>');
 export const ICON_CHECK = svg('<path d="M20 6 9 17l-5-5"/>');
+export const ICON_X = svg('<path d="M18 6 6 18M6 6l12 12"/>', 14);
+export const ICON_WALLET_LG = svg(
+  '<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><circle cx="16" cy="14.5" r="1"/>',
+  18
+);
+export const ICON_RECEIPT = svg(
+  '<path d="M6 2h12v20l-3-2-3 2-3-2-3 2V2Z"/><path d="M9 8h6M9 12h6"/>',
+  18
+);
+export const ICON_CALENDAR = svg(
+  '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/>',
+  18
+);
 export const ICON_MINUS = svg('<path d="M5 12h14"/>');
 export const ICON_CLOCK = svg('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>', 14);
 export const ICON_WALLET = svg(

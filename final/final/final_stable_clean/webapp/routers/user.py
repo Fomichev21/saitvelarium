@@ -9,6 +9,7 @@ from config import REFERRAL_BONUS_DAYS, TARIFFS, settings
 from database import (
     activate_trial_days,
     add_support_message,
+    count_unread_support_for_user,
     get_balance,
     get_referral_stats,
     get_trial,
@@ -17,6 +18,8 @@ from database import (
     list_admin_ids,
     list_support_messages,
     list_user_payments,
+    mark_support_messages_read,
+    use_promo,
 )
 from payments import check_payment, create_payment_for_tariff, notify_admins_about_payment
 from remnawave import check_nodes_status, get_user_traffic
@@ -34,7 +37,7 @@ from webapp.content import (
 )
 from webapp.deps import CurrentUser, get_current_user
 from webapp.qr import qrcode_png_response
-from webapp.schemas import CheckoutRequest, SupportMessageRequest
+from webapp.schemas import CheckoutRequest, PromoRedeemRequest, SupportMessageRequest
 
 router = APIRouter(tags=["user"])
 
@@ -182,6 +185,19 @@ def checkout_status(payment_id: str, current_user: CurrentUser = Depends(get_cur
     return payment
 
 
+@router.post("/promo/redeem")
+def redeem_promo(
+    payload: PromoRedeemRequest, current_user: CurrentUser = Depends(get_current_user)
+) -> dict[str, Any]:
+    try:
+        result = use_promo(current_user.user_id, payload.code)
+    except Exception as exc:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"Не удалось активировать подписку: {exc}") from exc
+    if result is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Промокод не найден или уже использован")
+    return result
+
+
 @router.post("/trial/activate")
 async def activate_trial(current_user: CurrentUser = Depends(get_current_user)) -> dict[str, Any]:
     existing = get_trial(current_user.user_id)
@@ -244,9 +260,16 @@ def support_faq() -> dict[str, Any]:
     }
 
 
+@router.get("/support/unread")
+def support_unread(current_user: CurrentUser = Depends(get_current_user)) -> dict[str, Any]:
+    return {"unread": count_unread_support_for_user(current_user.user_id)}
+
+
 @router.get("/support/chat")
 def support_chat(current_user: CurrentUser = Depends(get_current_user)) -> dict[str, Any]:
-    return {"messages": list_support_messages(current_user.user_id)}
+    messages = list_support_messages(current_user.user_id)
+    mark_support_messages_read(current_user.user_id, viewer="user")
+    return {"messages": messages}
 
 
 @router.post("/support/chat")

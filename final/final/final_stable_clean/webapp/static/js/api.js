@@ -79,7 +79,7 @@ export const api = {
   del: (path) => request(path, { method: "DELETE" }),
 };
 
-async function fetchWithAuth(path, retry = true) {
+export async function fetchWithAuth(path, retry = true) {
   const token = getToken();
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
   const res = await fetch(path, { headers });

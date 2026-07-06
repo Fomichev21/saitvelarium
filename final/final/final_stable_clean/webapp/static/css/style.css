@@ -17,6 +17,21 @@
   --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
+html.theme-light {
+  --bg: #fbf3f3;
+  --bg-elevated: #ffffff;
+  --card-bg: #ffffff;
+  --card-bg-soft: #fdeaea;
+  --border: #f0d3d3;
+  --accent: #e4342f;
+  --accent-dim: rgba(228, 52, 47, 0.1);
+  --text: #2a1213;
+  --text-dim: #7a4c4d;
+  --text-faint: #a3797a;
+  --danger: #d97a1f;
+  --success: #1f9d63;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -188,6 +203,69 @@ button {
   animation: fadeSlideIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+.profile-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 800;
+  color: #170809;
+  background: linear-gradient(135deg, #ff8a8a, var(--accent) 65%);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+  animation: fadeSlideIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.payment-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 2px;
+  border-bottom: 1px solid var(--border);
+}
+
+.payment-row:last-child {
+  border-bottom: none;
+}
+
+.payment-row-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.payment-row-right {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.payment-row-right .badge {
+  margin-top: 2px;
+}
+
+.icon-badge.status-paid {
+  color: var(--success);
+  background: rgba(95, 227, 161, 0.14);
+  box-shadow: none;
+}
+
+.icon-badge.status-pending {
+  color: var(--accent);
+  background: var(--accent-dim);
+  box-shadow: none;
+}
+
+.icon-badge.status-failed {
+  color: var(--danger);
+  background: rgba(255, 159, 67, 0.14);
+  box-shadow: none;
+}
+
 .hero-title {
   font-size: 17px;
   font-weight: 800;
@@ -336,6 +414,7 @@ button {
 }
 
 .nav-item {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -357,6 +436,21 @@ button {
   width: 18px;
   height: 18px;
   flex-shrink: 0;
+}
+
+.nav-badge {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-left: auto;
+  box-shadow: 0 0 0 2px var(--card-bg-soft);
+  animation: pulseGlow 1.6s ease-in-out infinite;
+}
+
+.nav-item.active .nav-badge {
+  background: #170809;
+  box-shadow: 0 0 0 2px var(--accent);
 }
 
 .nav-item.active {
@@ -489,6 +583,12 @@ button {
   opacity: 0.5;
   cursor: default;
   box-shadow: none;
+}
+
+.btn-sm {
+  width: auto;
+  padding: 8px 16px;
+  font-size: 13px;
 }
 
 .btn-secondary {
@@ -783,6 +883,29 @@ textarea.input {
   color: var(--danger);
 }
 
+.filter-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.chip-filter {
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--card-bg-soft);
+  color: var(--text-dim);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.chip-filter.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #170809;
+}
+
 .toast {
   position: fixed;
   bottom: 20px;
@@ -889,6 +1012,13 @@ textarea.input {
     background: none;
     border-radius: var(--radius-sm);
     box-shadow: none;
+  }
+
+  .bottom-nav .nav-badge {
+    position: absolute;
+    top: 4px;
+    right: 22px;
+    margin-left: 0;
   }
 
   .bottom-nav .nav-icon {

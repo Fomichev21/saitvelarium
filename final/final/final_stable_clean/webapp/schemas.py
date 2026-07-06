@@ -45,3 +45,7 @@ class BroadcastRequest(BaseModel):
 
 class SupportMessageRequest(BaseModel):
     text: str = Field(min_length=1, max_length=2000)
+
+
+class PromoRedeemRequest(BaseModel):
+    code: str = Field(min_length=1, max_length=64)

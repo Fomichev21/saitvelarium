@@ -10,6 +10,14 @@ export function initTelegram() {
   } catch (e) {
     /* older client versions may not support this */
   }
+
+  applyColorScheme();
+  if (tg.onEvent) tg.onEvent("themeChanged", applyColorScheme);
+}
+
+function applyColorScheme() {
+  if (!tg) return;
+  document.documentElement.classList.toggle("theme-light", tg.colorScheme === "light");
 }
 
 export function getInitData() {
@@ -22,6 +30,14 @@ export function hapticSuccess() {
 
 export function hapticError() {
   if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("error");
+}
+
+export function enableClosingConfirmation() {
+  if (tg && tg.enableClosingConfirmation) tg.enableClosingConfirmation();
+}
+
+export function disableClosingConfirmation() {
+  if (tg && tg.disableClosingConfirmation) tg.disableClosingConfirmation();
 }
 
 export function openLink(url) {

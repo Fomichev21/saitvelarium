@@ -3,12 +3,28 @@ import { toast, fmtDate, showModal, closeModal } from "../ui.js";
 import { ICON_WALLET, ICON_CLOCK, ICON_PLUS, ICON_MINUS, ICON_CHECK, ICON_BAN, ICON_TRASH } from "../icons.js";
 
 let root;
+let activeRole = "";
+let activeBanned = "";
+
+const ROLE_FILTERS = [
+  { key: "", label: "Все" },
+  { key: "user", label: "Пользователи" },
+  { key: "admin", label: "Админы" },
+];
+
+const BANNED_FILTERS = [
+  { key: "", label: "Все" },
+  { key: "false", label: "Активные" },
+  { key: "true", label: "Забаненные" },
+];
 
 export async function renderUsers(container) {
   root = container;
   root.innerHTML = `
     <div class="card">
-      <input class="input" id="user-search" placeholder="Поиск по ID или username" style="margin-bottom:0;" />
+      <input class="input" id="user-search" placeholder="Поиск по ID или username" style="margin-bottom:12px;" />
+      <div class="filter-row" id="role-filters" style="margin-bottom:8px;"></div>
+      <div class="filter-row" id="banned-filters"></div>
     </div>
     <div id="user-list"><div class="center-loader">Загрузка…</div></div>
   `;
@@ -20,12 +36,41 @@ export async function renderUsers(container) {
     timer = setTimeout(() => loadUsers(search.value.trim()), 300);
   });
 
+  const roleRow = root.querySelector("#role-filters");
+  roleRow.innerHTML = ROLE_FILTERS.map(
+    (f) => `<button class="chip-filter ${f.key === activeRole ? "active" : ""}" data-key="${f.key}">${f.label}</button>`
+  ).join("");
+  roleRow.querySelectorAll(".chip-filter").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      activeRole = btn.dataset.key;
+      roleRow.querySelectorAll(".chip-filter").forEach((b) => b.classList.toggle("active", b === btn));
+      loadUsers(search.value.trim());
+    });
+  });
+
+  const bannedRow = root.querySelector("#banned-filters");
+  bannedRow.innerHTML = BANNED_FILTERS.map(
+    (f) => `<button class="chip-filter ${f.key === activeBanned ? "active" : ""}" data-key="${f.key}">${f.label}</button>`
+  ).join("");
+  bannedRow.querySelectorAll(".chip-filter").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      activeBanned = btn.dataset.key;
+      bannedRow.querySelectorAll(".chip-filter").forEach((b) => b.classList.toggle("active", b === btn));
+      loadUsers(search.value.trim());
+    });
+  });
+
   await loadUsers("");
 }
 
 async function loadUsers(q) {
   const list = root.querySelector("#user-list");
-  const data = await api.get(`/api/admin/users${q ? `?q=${encodeURIComponent(q)}` : ""}`);
+  const params = new URLSearchParams();
+  if (q) params.set("q", q);
+  if (activeRole) params.set("role", activeRole);
+  if (activeBanned) params.set("banned", activeBanned);
+  const query = params.toString();
+  const data = await api.get(`/api/admin/users${query ? `?${query}` : ""}`);
 
   if (!data.users.length) {
     list.innerHTML = `<p class="muted">Никого не нашли.</p>`;

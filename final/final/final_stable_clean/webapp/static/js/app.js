@@ -32,6 +32,22 @@ document.querySelectorAll(".nav-item[data-route]").forEach((el) => {
 
 const router = createRouter(routes, "home", setActiveNav);
 
+function setSupportBadge(count) {
+  const show = count > 0;
+  document.querySelectorAll("#support-badge, #support-badge-mobile").forEach((el) => {
+    el.hidden = !show;
+  });
+}
+
+async function pollSupportUnread() {
+  try {
+    const data = await api.get("/api/support/unread");
+    setSupportBadge(data.unread || 0);
+  } catch {
+    // ignore transient errors
+  }
+}
+
 async function boot() {
   initTelegram();
   initSidebarToggle();
@@ -53,6 +69,14 @@ async function boot() {
   } catch (err) {
     toast(err.message || "Ошибка загрузки");
   }
+
+  pollSupportUnread();
+  setInterval(pollSupportUnread, 20000);
+  window.addEventListener("hashchange", () => {
+    if (window.location.hash.replace("#", "") === "support") {
+      setTimeout(pollSupportUnread, 500);
+    }
+  });
 }
 
 boot();

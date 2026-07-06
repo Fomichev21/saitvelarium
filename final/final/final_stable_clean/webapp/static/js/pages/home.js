@@ -1,6 +1,6 @@
-import { api } from "../api.js";
+import { api, fetchWithAuth } from "../api.js";
 import { toast, fmtDate, copyToClipboard, showModal, closeModal } from "../ui.js";
-import { hapticSuccess, openLink } from "../telegram.js";
+import { hapticSuccess, openLink, enableClosingConfirmation, disableClosingConfirmation } from "../telegram.js";
 import { ICON_COPY, ICON_QR, ICON_ARROW_OUT, HIGHLIGHT_ICONS } from "../icons.js";
 
 const STATUS_LABEL = {
@@ -200,7 +200,9 @@ async function checkout(tariffCode) {
   closeModal();
   try {
     const payment = await api.post("/api/subscription/checkout", { tariff_code: tariffCode });
-    showModal(
+    enableClosingConfirmation();
+    window.addEventListener("hashchange", disableClosingConfirmation, { once: true });
+    const backdrop = showModal(
       `
       <p class="section-title">Счёт создан</p>
       <p class="muted">Тариф: ${payment.title}<br/>Сумма: ${payment.amount}₽<br/>Счёт: ${payment.invoice_code}</p>
@@ -208,8 +210,15 @@ async function checkout(tariffCode) {
       <p class="faint" style="margin-top:10px;">После оплаты доступ активируется автоматически в течение пары минут.</p>
       <button class="btn btn-secondary" id="modal-close" style="margin-top:10px;">Закрыть</button>
     `,
-      (modal) => modal.querySelector("#modal-close").addEventListener("click", closeModal)
+      (modal) =>
+        modal.querySelector("#modal-close").addEventListener("click", () => {
+          disableClosingConfirmation();
+          closeModal();
+        })
     );
+    backdrop.addEventListener("click", (e) => {
+      if (e.target === backdrop) disableClosingConfirmation();
+    });
   } catch (err) {
     toast(err.message);
   }
@@ -226,9 +235,17 @@ async function activateTrial() {
   }
 }
 
-function showKeyQr() {
+async function showKeyQr() {
   showModal(
-    `<p class="section-title">QR-код ключа</p><div class="qr-wrap"><img src="/api/subscription/key/qrcode" alt="QR" width="220" height="220"/></div><button class="btn btn-secondary" id="modal-close" style="margin-top:10px;">Закрыть</button>`,
+    `<p class="section-title">QR-код ключа</p><div class="qr-wrap"><img id="qr-image" alt="QR" width="220" height="220"/></div><button class="btn btn-secondary" id="modal-close" style="margin-top:10px;">Закрыть</button>`,
     (modal) => modal.querySelector("#modal-close").addEventListener("click", closeModal)
   );
+  try {
+    const res = await fetchWithAuth("/api/subscription/key/qrcode");
+    const blob = await res.blob();
+    const img = document.getElementById("qr-image");
+    if (img) img.src = URL.createObjectURL(blob);
+  } catch (err) {
+    toast(err.message || "Не удалось загрузить QR-код");
+  }
 }

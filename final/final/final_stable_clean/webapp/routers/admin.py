@@ -7,10 +7,11 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
-from config import ROLE_OWNER
+from config import ROLE_ADMIN, ROLE_OWNER
 from database import (
     add_support_message,
     adjust_subscription_days,
+    count_unread_support_for_admin,
     create_backup_copy,
     create_promo_with_limit,
     delete_promo,
@@ -27,6 +28,7 @@ from database import (
     list_user_payments,
     list_users,
     mark_payment_failed,
+    mark_support_messages_read,
     reset_subscription,
     set_banned,
     set_role,
@@ -69,6 +71,8 @@ def stats(_: CurrentUser = Depends(require_admin)) -> dict[str, Any]:
 @router.get("/users")
 def users(
     q: str | None = Query(default=None),
+    role_filter: str | None = Query(default=None, alias="role"),
+    banned_filter: bool | None = Query(default=None, alias="banned"),
     limit: int = Query(default=20, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
     _: CurrentUser = Depends(require_admin),
@@ -82,6 +86,12 @@ def users(
             if needle in str(row["user_id"])
             or needle in str(row.get("username") or "").lower()
         ]
+    if role_filter == "admin":
+        rows = [row for row in rows if int(row.get("role") or 1) >= ROLE_ADMIN]
+    elif role_filter == "user":
+        rows = [row for row in rows if int(row.get("role") or 1) < ROLE_ADMIN]
+    if banned_filter is not None:
+        rows = [row for row in rows if bool(row.get("is_banned")) == banned_filter]
     return {"total": len(rows), "users": rows[offset : offset + limit]}
 
 
@@ -226,6 +236,11 @@ async def broadcast(payload: BroadcastRequest, _: CurrentUser = Depends(require_
     return {"delivered": delivered}
 
 
+@router.get("/support/unread")
+def support_unread(_: CurrentUser = Depends(require_admin)) -> dict[str, Any]:
+    return {"unread": count_unread_support_for_admin()}
+
+
 @router.get("/support/threads")
 def support_threads(_: CurrentUser = Depends(require_admin)) -> dict[str, Any]:
     return {"threads": list_support_threads(limit=100)}
@@ -233,7 +248,9 @@ def support_threads(_: CurrentUser = Depends(require_admin)) -> dict[str, Any]:
 
 @router.get("/support/threads/{user_id}")
 def support_thread_messages(user_id: int, _: CurrentUser = Depends(require_admin)) -> dict[str, Any]:
-    return {"messages": list_support_messages(user_id)}
+    messages = list_support_messages(user_id)
+    mark_support_messages_read(user_id, viewer="admin")
+    return {"messages": messages}
 
 
 @router.post("/support/threads/{user_id}/reply")
