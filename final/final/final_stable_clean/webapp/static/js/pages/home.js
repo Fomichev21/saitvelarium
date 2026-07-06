@@ -12,11 +12,12 @@ const STATUS_LABEL = {
 export async function renderHome(root) {
   root.innerHTML = `<div class="center-loader">Загрузка…</div>`;
 
-  const [subscription, tariffs, info, me] = await Promise.all([
+  const [subscription, tariffs, info, me, serverStatus] = await Promise.all([
     api.get("/api/subscription"),
     api.get("/api/tariffs"),
     api.get("/api/info"),
     api.get("/api/me"),
+    api.get("/api/status").catch(() => ({ available: false })),
   ]);
 
   const pct = subscription.total_days
@@ -31,6 +32,15 @@ export async function renderHome(root) {
         <div class="hero-subtitle">${info.tagline}</div>
       </div>
     </div>
+
+    ${
+      serverStatus.available
+        ? `<div class="server-status ${serverStatus.all_online ? "ok" : "warn"}">
+             <span class="pill-dot"></span>
+             ${serverStatus.all_online ? "Все серверы работают" : `Перебои на некоторых серверах (${serverStatus.online}/${serverStatus.total})`}
+           </div>`
+        : ""
+    }
 
     <div class="highlight-row">
       ${info.highlights
@@ -61,6 +71,7 @@ export async function renderHome(root) {
         <button class="btn btn-secondary" id="btn-copy-key">${ICON_COPY}Скопировать</button>
         <button class="btn btn-secondary btn-icon" id="btn-qr-key">${ICON_QR}</button>
       </div>
+      ${renderTrafficUsage(subscription.traffic)}
     </div>
 
     <div class="card">
@@ -118,6 +129,28 @@ export async function renderHome(root) {
   }
   const qrBtn = root.querySelector("#btn-qr-key");
   if (qrBtn) qrBtn.addEventListener("click", showKeyQr);
+}
+
+function fmtGB(bytes) {
+  return (bytes / 1024 ** 3).toFixed(1).replace(/\.0$/, "");
+}
+
+function renderTrafficUsage(traffic) {
+  if (!traffic) return "";
+  const usedGB = fmtGB(traffic.used_bytes);
+  if (!traffic.limit_bytes) {
+    return `
+      <div class="traffic-usage">
+        <div class="progress-label"><span>Использовано трафика</span><span>${usedGB} ГБ</span></div>
+      </div>`;
+  }
+  const pct = Math.min(100, Math.round((traffic.used_bytes / traffic.limit_bytes) * 100));
+  const limitGB = fmtGB(traffic.limit_bytes);
+  return `
+    <div class="traffic-usage">
+      <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+      <div class="progress-label"><span>Трафик</span><span>${usedGB} из ${limitGB} ГБ</span></div>
+    </div>`;
 }
 
 function pluralDays(n) {

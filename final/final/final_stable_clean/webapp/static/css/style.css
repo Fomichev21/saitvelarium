@@ -199,6 +199,31 @@ button {
   margin-top: 2px;
 }
 
+.server-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 4px 14px;
+  color: var(--success);
+}
+
+.server-status.warn {
+  color: var(--danger);
+}
+
+.server-status .pill-dot {
+  width: 7px;
+  height: 7px;
+}
+
+.traffic-usage {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
 .highlight-row {
   display: flex;
   gap: 8px;
