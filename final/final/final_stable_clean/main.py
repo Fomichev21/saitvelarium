@@ -22,6 +22,8 @@ from database import (
     mark_payment_paid,
 )
 from handlers import admin, help, user
+from monitor_bot.heartbeat import beat
+from monitor_bot.notifier import report_error, report_exception
 from payments import deliver_access_message_async, process_expiry_reminders
 from remnawave import get_missing_remnawave_settings
 
@@ -114,6 +116,7 @@ async def platego_webhook(request: web.Request) -> web.Response:
         return web.Response(status=200)
     except Exception as e:
         print(f"Webhook error: {e}")
+        report_exception("platego_webhook", e)
         return web.Response(status=200)
 
 
@@ -154,6 +157,7 @@ async def main() -> None:
         bot = build_bot()
         reminder_task = asyncio.create_task(reminder_loop(bot))
         backup_task = asyncio.create_task(daily_backup_loop(bot))
+        heartbeat_task = asyncio.create_task(heartbeat_loop())
         try:
             try:
                 await dispatcher.start_polling(bot)
@@ -165,14 +169,22 @@ async def main() -> None:
                 continue
             except Exception as exc:
                 print(f"Polling crashed: {exc!r}. Restarting in 10 seconds.")
+                report_exception("bot_polling", exc)
                 await asyncio.sleep(10)
                 continue
             return
         finally:
             reminder_task.cancel()
             backup_task.cancel()
-            await asyncio.gather(reminder_task, backup_task, return_exceptions=True)
+            heartbeat_task.cancel()
+            await asyncio.gather(reminder_task, backup_task, heartbeat_task, return_exceptions=True)
             await bot.session.close()
+
+
+async def heartbeat_loop() -> None:
+    while True:
+        beat("main_bot")
+        await asyncio.sleep(60)
 
 
 async def reminder_loop(bot: Bot) -> None:
@@ -181,8 +193,8 @@ async def reminder_loop(bot: Bot) -> None:
             await process_expiry_reminders(bot)
         except asyncio.CancelledError:
             raise
-        except Exception:
-            pass
+        except Exception as exc:
+            report_exception("reminder_loop", exc)
 
         await asyncio.sleep(3600)
 
@@ -224,8 +236,8 @@ async def daily_backup_loop(bot: Bot) -> None:
                         pass
         except asyncio.CancelledError:
             raise
-        except Exception:
-            pass
+        except Exception as exc:
+            report_exception("daily_backup_loop", exc)
 
 
 if __name__ == "__main__":

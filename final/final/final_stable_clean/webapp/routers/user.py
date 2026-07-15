@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime
 from typing import Any
 
@@ -14,14 +15,17 @@ from database import (
     get_referral_stats,
     get_trial,
     get_user,
+    get_user_email,
     get_vpn_key,
     list_admin_ids,
     list_support_messages,
     list_user_payments,
+    mark_payment_access_sent,
     mark_support_messages_read,
     use_promo,
 )
 from payments import check_payment, create_payment_for_tariff, notify_admins_about_payment
+from webapp.email_auth import send_access_email
 from remnawave import check_nodes_status, get_user_traffic
 from webapp.bot import get_bot, get_bot_username
 from webapp.content import (
@@ -159,7 +163,7 @@ def subscription_key_qrcode(current_user: CurrentUser = Depends(get_current_user
 
 @router.get("/tariffs")
 def tariffs() -> dict[str, Any]:
-    return {"tariffs": [{"code": code, **tariff} for code, tariff in TARIFFS.items()]}
+    return {"tariffs": [{"code": code, **tariff} for code, tariff in TARIFFS.items() if not tariff.get("traffic_reset")]}
 
 
 @router.post("/subscription/checkout")
@@ -170,11 +174,17 @@ async def checkout(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Unknown tariff")
 
     payment = create_payment_for_tariff(current_user.user_id, payload.tariff_code)
+    # Fire admin notification in the background — never block the buyer's response
+    # on Telegram (and on this dev machine a proxy-less Bot() can hang).
+    asyncio.create_task(_notify_admins_bg(str(payment["id"])))
+    return payment
+
+
+async def _notify_admins_bg(payment_id: str) -> None:
     try:
-        await notify_admins_about_payment(get_bot(), str(payment["id"]))
+        await asyncio.wait_for(notify_admins_about_payment(get_bot(), payment_id), timeout=8)
     except Exception:
         pass
-    return payment
 
 
 @router.get("/subscription/checkout/{payment_id}/status")
@@ -182,6 +192,19 @@ def checkout_status(payment_id: str, current_user: CurrentUser = Depends(get_cur
     payment = check_payment(payment_id)
     if not payment or int(payment["user_id"]) != current_user.user_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Payment not found")
+
+    # E-mail buyers are not reachable via a Telegram DM, so deliver the key by e-mail
+    # once the payment is confirmed (idempotent via access_sent_at).
+    if payment.get("status") == "paid" and not payment.get("access_sent_at"):
+        email = get_user_email(current_user.user_id)
+        if email:
+            vpn_key = get_vpn_key(current_user.user_id)
+            sub_url = (vpn_key or {}).get("config_text")
+            if sub_url:
+                user = get_user(current_user.user_id)
+                if send_access_email(email, sub_url, user.get("subscription_until")):
+                    mark_payment_access_sent(payment_id)
+
     return payment
 
 
@@ -221,7 +244,7 @@ async def activate_trial(current_user: CurrentUser = Depends(get_current_user)) 
         )
 
     try:
-        result = activate_trial_days(current_user.user_id, 2)
+        result = activate_trial_days(current_user.user_id, 3)
     except Exception as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
 

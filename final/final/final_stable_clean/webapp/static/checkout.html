@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="ru" class="theme-dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Оформление — Velarium VPN</title>
+  <meta name="robots" content="noindex" />
+  <meta name="theme-color" content="#0b0304" />
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/landing.css?v=3" />
+  <link rel="stylesheet" href="/static/css/checkout.css?v=3" />
+</head>
+<body class="co-body">
+  <div class="ambient" aria-hidden="true">
+    <span class="blob blob-1"></span>
+    <span class="blob blob-2"></span>
+  </div>
+
+  <header class="co-header">
+    <div class="co-header-inner">
+      <a class="brand" href="/">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" width="22" height="22"><path d="M12 2 4 5v6c0 5 3.4 8.3 8 11 4.6-2.7 8-6 8-11V5l-8-3Z" fill="url(#hg)" stroke="currentColor" stroke-width="1.2"/><defs><linearGradient id="hg" x1="4" y1="2" x2="20" y2="22" gradientUnits="userSpaceOnUse"><stop stop-color="#ff5b5b"/><stop offset="1" stop-color="#c81f28"/></linearGradient></defs></svg>
+        </span>
+        <span class="brand-name">Velarium<span class="brand-dim">VPN</span></span>
+      </a>
+      <div class="co-secure">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+        Защищённое оформление
+      </div>
+    </div>
+  </header>
+
+  <!-- STEPPER -->
+  <div class="co-progress-wrap">
+    <ol class="co-progress" id="co-progress">
+      <li class="co-step is-active" data-step="1"><span class="co-step-dot">1</span><span class="co-step-label">Тариф</span></li>
+      <li class="co-step" data-step="2"><span class="co-step-dot">2</span><span class="co-step-label">Оформление</span></li>
+      <li class="co-step" data-step="3"><span class="co-step-dot">3</span><span class="co-step-label">Готово</span></li>
+    </ol>
+  </div>
+
+  <main class="co-main container">
+    <div class="co-grid">
+      <!-- LEFT: step panels -->
+      <div class="co-panels">
+
+        <!-- STEP 1 — PLAN -->
+        <section class="co-panel is-active" id="panel-1" data-step="1">
+          <h1 class="co-h1">Выбери тариф</h1>
+          <p class="co-sub">Чем длиннее период — тем выгоднее. Или начни с бесплатного пробного периода.</p>
+
+          <button class="co-trial" id="co-trial" type="button">
+            <span class="co-trial-ic">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8"/><path d="M16.5 8a2.5 2.5 0 0 0 0-5C13 3 12 8 12 8"/></svg>
+            </span>
+            <span class="co-trial-body">
+              <b id="co-trial-title">3 дня бесплатно</b>
+              <span>Попробуй без оплаты и привязки карты — активация в Telegram</span>
+            </span>
+            <span class="co-trial-arrow">→</span>
+          </button>
+
+          <div class="co-plans" id="co-plans"><!-- plan options injected --></div>
+
+          <div class="co-actions">
+            <button class="btn btn-primary btn-lg btn-block" id="to-step-2" type="button">Продолжить к оформлению</button>
+          </div>
+        </section>
+
+        <!-- STEP 2 — CHECKOUT -->
+        <section class="co-panel" id="panel-2" data-step="2">
+          <button class="co-back" id="back-to-1" type="button">← Изменить тариф</button>
+          <h1 class="co-h1">Оформление заказа</h1>
+          <p class="co-sub">Вход через Telegram — ключ придёт прямо сюда и в бота. Ничего устанавливать не нужно.</p>
+
+          <div class="co-auth">
+            <div class="co-auth-head">
+              <span class="co-auth-badge">Шаг 1</span>
+              <b>Выбери способ входа</b>
+            </div>
+
+            <div class="co-tabs" role="tablist">
+              <button class="co-tab is-active" data-tab="tg" type="button" role="tab">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>
+                Telegram
+              </button>
+              <button class="co-tab" data-tab="email" type="button" role="tab">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+                Эл. почта
+              </button>
+            </div>
+
+            <!-- Telegram -->
+            <div class="co-tabpanel is-active" data-tab="tg">
+              <div id="tg-login-slot" class="co-tg-slot"><!-- Telegram Login Widget (prod) --></div>
+              <a class="btn btn-primary btn-lg btn-block co-tg-fallback" id="tg-continue" href="#" target="_blank" rel="noopener">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>
+                Продолжить в Telegram
+              </a>
+              <p class="co-auth-note">Ключ придёт в бота и появится в личном кабинете.</p>
+            </div>
+
+            <!-- Email -->
+            <div class="co-tabpanel" data-tab="email">
+              <div class="co-estep" id="estep-email">
+                <label class="co-field">
+                  <span>E-mail</span>
+                  <input type="email" id="email-input" placeholder="you@example.com" autocomplete="email" />
+                </label>
+                <p class="co-error" id="email-error" hidden></p>
+                <button class="btn btn-primary btn-lg btn-block" id="email-send" type="button">Получить код</button>
+              </div>
+
+              <div class="co-estep" id="estep-code" hidden>
+                <p class="co-esent">Код отправлен на <b id="email-sent-to"></b></p>
+                <label class="co-field">
+                  <span>Код из письма</span>
+                  <input type="text" inputmode="numeric" maxlength="6" id="code-input" placeholder="6 цифр" autocomplete="one-time-code" />
+                </label>
+                <p class="co-error" id="code-error" hidden></p>
+                <p class="co-dev-hint" id="email-dev-hint" hidden></p>
+                <button class="btn btn-primary btn-lg btn-block" id="email-verify" type="button">Подтвердить и оплатить</button>
+                <div class="co-elinks">
+                  <button class="co-linkbtn" id="email-resend" type="button">Отправить код снова</button>
+                  <button class="co-linkbtn" id="email-change" type="button">Изменить e-mail</button>
+                </div>
+              </div>
+              <p class="co-auth-note">Код подтверждения и ссылку на доступ пришлём на почту. Данные карты мы не храним.</p>
+            </div>
+          </div>
+
+          <ul class="co-guarantees">
+            <li><span class="co-g-ic"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/></svg></span><div><b>Мгновенная выдача</b><span>Ключ активируется автоматически сразу после оплаты</span></div></li>
+            <li><span class="co-g-ic"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><div><b>Безопасная оплата</b><span>Через защищённый платёжный сервис в Telegram</span></div></li>
+            <li><span class="co-g-ic"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></span><div><b>Отмена в любой момент</b><span>Никаких автосписаний и скрытых платежей</span></div></li>
+          </ul>
+        </section>
+
+        <!-- STEP 3 — DELIVERY -->
+        <section class="co-panel" id="panel-3" data-step="3">
+          <!-- 3a. Checking payment -->
+          <div class="co-processing" id="co-processing">
+            <div class="co-spinner" aria-hidden="true"></div>
+            <h1 class="co-h1">Проверяем оплату…</h1>
+            <p class="co-sub">Обычно это занимает несколько секунд после оплаты. Не закрывай страницу — доступ появится здесь автоматически.</p>
+          </div>
+
+          <!-- 3b. Payment not confirmed -->
+          <div class="co-failed" id="co-failed" hidden>
+            <div class="co-fail-ic" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+            </div>
+            <h1 class="co-h1">Оплата не подтверждена</h1>
+            <p class="co-sub">Мы пока не получили подтверждение платежа. Если ты только что оплатил — подожди минуту, платёж подтвердится сам, и доступ появится здесь и придёт на почту/в бота.</p>
+            <div class="co-actions co-done-actions">
+              <button class="btn btn-primary btn-lg" id="co-retry" type="button">Оплатить ещё раз</button>
+              <a class="btn btn-ghost btn-lg" data-link="support" href="#">Написать в поддержку</a>
+            </div>
+          </div>
+
+          <!-- 3c. Success -->
+          <div class="co-done" id="co-done" hidden>
+            <div class="co-check" aria-hidden="true">
+              <svg viewBox="0 0 52 52"><circle class="co-check-circle" cx="26" cy="26" r="24" fill="none"/><path class="co-check-mark" fill="none" d="M14 27l8 8 16-18"/></svg>
+            </div>
+            <h1 class="co-h1">Заказ оформлен!</h1>
+            <p class="co-sub" id="co-done-sub">Подписка активна. Твой ключ доступа готов — подключайся.</p>
+
+            <div class="glass co-key">
+              <div class="co-key-head"><span>Ссылка на подписку</span><button class="co-copy" id="co-copy" type="button">Скопировать</button></div>
+              <code class="co-key-value" id="co-key-value"></code>
+            </div>
+
+            <div class="co-apps">
+              <p class="co-apps-title">Добавь ссылку в одно из приложений:</p>
+              <div class="co-apps-row">
+                <a class="glass co-app" href="https://happ.su/" target="_blank" rel="noopener"><img src="/static/assets/app-happ.png" alt="Happ" /><b>Happ</b></a>
+                <a class="glass co-app" href="https://play.google.com/store/apps/details?id=com.v2ray.ang" target="_blank" rel="noopener"><img src="/static/assets/app-v2rayng.jpg" alt="V2RayNG" /><b>V2RayNG</b></a>
+                <a class="glass co-app" href="https://hiddify.com/" target="_blank" rel="noopener"><img src="/static/assets/app-hiddify.png" alt="Hiddify" /><b>Hiddify</b></a>
+              </div>
+            </div>
+
+            <div class="co-actions co-done-actions">
+              <a class="btn btn-primary btn-lg" id="co-open-cabinet" href="/app">Открыть кабинет</a>
+              <a class="btn btn-ghost btn-lg" data-link="bot" href="#">Открыть в Telegram</a>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- RIGHT: order summary -->
+      <aside class="co-summary glass" id="co-summary">
+        <h2 class="co-summary-title">Ваш заказ</h2>
+        <div class="co-summary-plan">
+          <div class="co-sp-row"><span id="sum-plan-name">—</span><b id="sum-plan-price">—</b></div>
+          <div class="co-sp-permonth" id="sum-permonth"></div>
+        </div>
+        <ul class="co-summary-list">
+          <li>Все серверы и локации</li>
+          <li>Несколько устройств одновременно</li>
+          <li>Без логов и слежки</li>
+          <li>Поддержка в Telegram</li>
+        </ul>
+        <div class="co-summary-total">
+          <span>Итого</span>
+          <b id="sum-total">—</b>
+        </div>
+        <div class="co-summary-save" id="sum-save"></div>
+        <div class="co-summary-trust">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 5v6c0 5 3.4 8.3 8 11 4.6-2.7 8-6 8-11V5l-8-3Z"/></svg>
+          <span>Безопасная оплата · мгновенная автовыдача</span>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <script src="/static/js/checkout.js?v=3"></script>
+</body>
+</html>

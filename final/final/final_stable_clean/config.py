@@ -124,6 +124,16 @@ class Settings:
     webapp_session_ttl_seconds: int = _to_int("WEBAPP_SESSION_TTL_SECONDS", 3600)
     webapp_init_data_max_age_seconds: int = _to_int("WEBAPP_INIT_DATA_MAX_AGE_SECONDS", 86400)
 
+    # Email (SMTP) for e-mail checkout: verification codes + key delivery.
+    # For Gmail use an App Password (Google Account -> Security -> App Passwords; requires 2FA).
+    smtp_host: str = os.getenv("SMTP_HOST", "smtp.gmail.com").strip()
+    smtp_port: int = _to_int("SMTP_PORT", 587)
+    smtp_user: str = os.getenv("SMTP_USER", "").strip()
+    smtp_password: str = os.getenv("SMTP_PASSWORD", "").strip()
+    smtp_from: str = os.getenv("SMTP_FROM", "").strip()
+    smtp_from_name: str = os.getenv("SMTP_FROM_NAME", "Velarium VPN").strip()
+    email_code_ttl_seconds: int = _to_int("EMAIL_CODE_TTL_SECONDS", 600)
+
     wireguard_endpoint: str = os.getenv("WG_ENDPOINT", "vpn.example.com:51820")
     wireguard_public_key: str = os.getenv("WG_SERVER_PUBLIC_KEY", "SET_REAL_PUBLIC_KEY")
     wireguard_dns: str = os.getenv("WG_DNS", "1.1.1.1")

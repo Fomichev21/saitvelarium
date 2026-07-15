@@ -302,7 +302,7 @@ async def trial(callback: CallbackQuery) -> None:
         await callback.message.edit_text(
             "🆓 Пробное использование\n"
             "━━━━━━━━━━━━━━━━━━━━\n\n"
-            "Чтобы получить 2 дня пробного доступа, подпишись на наш Telegram-канал и нажми «Проверить подписку».\n\n"
+            "Чтобы получить 3 дня пробного доступа, подпишись на наш Telegram-канал и нажми «Проверить подписку».\n\n"
             f"Канал: {TRIAL_CHANNEL_URL}",
             reply_markup=trial_join_markup(),
         )
@@ -321,7 +321,7 @@ async def trial(callback: CallbackQuery) -> None:
         return
 
     try:
-        result = activate_trial_days(callback.from_user.id, 2)
+        result = activate_trial_days(callback.from_user.id, 3)
     except Exception as exc:
         await callback.answer("Не удалось выдать пробный доступ", show_alert=True)
         await callback.message.edit_text(
@@ -335,7 +335,7 @@ async def trial(callback: CallbackQuery) -> None:
         "✅ Пробный доступ активирован\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
         f"Действует до: {result['trial_until']}\n"
-        "Через 2 дня доступ будет автоматически завершен.",
+        "Через 3 дня доступ будет автоматически завершен.",
         reply_markup=back_to_main_markup(callback.from_user.id),
     )
 

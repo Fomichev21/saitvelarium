@@ -66,6 +66,54 @@ def validate_init_data(init_data: str, *, max_age_seconds: int | None = None) ->
     return fields
 
 
+def validate_login_widget(data: dict, *, max_age_seconds: int = 86400) -> TelegramUser:
+    """Validate a Telegram Login Widget payload (website login) and return the user.
+
+    NOTE: the Login Widget uses a DIFFERENT scheme than Mini App initData —
+    secret_key = SHA256(bot_token) (not HMAC("WebAppData", token)).
+    See https://core.telegram.org/widgets/login#checking-authorization
+    """
+    if not settings.bot_token:
+        raise InitDataError("bot token is not configured")
+
+    fields = {k: v for k, v in data.items() if v is not None}
+    provided_hash = fields.pop("hash", None)
+    if not provided_hash:
+        raise InitDataError("missing hash field")
+
+    data_check_string = "\n".join(
+        f"{key}={fields[key]}" for key in sorted(fields)
+    )
+    secret_key = hashlib.sha256(settings.bot_token.encode("utf-8")).digest()
+    computed_hash = hmac.new(
+        secret_key, data_check_string.encode("utf-8"), hashlib.sha256
+    ).hexdigest()
+
+    if not hmac.compare_digest(computed_hash, str(provided_hash)):
+        raise InitDataError("signature mismatch")
+
+    auth_date = fields.get("auth_date")
+    if max_age_seconds and auth_date:
+        try:
+            age = time.time() - int(auth_date)
+        except (ValueError, TypeError) as exc:
+            raise InitDataError("invalid auth_date") from exc
+        if age > max_age_seconds or age < -60:
+            raise InitDataError("login data is stale")
+
+    try:
+        user_id = int(fields.get("id"))
+    except (ValueError, TypeError) as exc:
+        raise InitDataError("invalid user id") from exc
+
+    return TelegramUser(
+        id=user_id,
+        username=fields.get("username"),
+        first_name=fields.get("first_name"),
+        last_name=fields.get("last_name"),
+    )
+
+
 def extract_user(fields: dict[str, str]) -> TelegramUser:
     raw_user = fields.get("user")
     if not raw_user:

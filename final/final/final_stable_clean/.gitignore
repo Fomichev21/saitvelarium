@@ -4,3 +4,10 @@ __pycache__/
 *.pyc
 db.sqlite3
 db.db
+monitor_bot/*.log.jsonl
+monitor_bot/actions.log.jsonl
+monitor_bot/heartbeats.json
+monitor_bot/admins.json
+monitor_bot/maintenance.json
+monitor_bot/dns_baseline.json
+monitor_bot/last_backup.json

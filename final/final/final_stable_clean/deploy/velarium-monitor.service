@@ -1,0 +1,16 @@
+[Unit]
+Description=Velarium infrastructure monitoring Telegram bot
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/Velariumvpnsystem/final/final/final_stable_clean
+EnvironmentFile=/root/Velariumvpnsystem/final/final/final_stable_clean/.env
+EnvironmentFile=/root/Velariumvpnsystem/final/final/final_stable_clean/monitor_bot/.env
+ExecStart=/root/Velariumvpnsystem/final/final/final_stable_clean/venv/bin/python -m monitor_bot.main
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

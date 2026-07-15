@@ -74,6 +74,7 @@ def _ensure_users_table(conn: sqlite3.Connection) -> None:
         "is_banned": "ALTER TABLE users ADD COLUMN is_banned INTEGER DEFAULT 0",
         "created_at": "ALTER TABLE users ADD COLUMN created_at TEXT",
         "referred_by": "ALTER TABLE users ADD COLUMN referred_by INTEGER",
+        "email": "ALTER TABLE users ADD COLUMN email TEXT",
     }
     for column, statement in migrations.items():
         if column not in columns:
@@ -250,6 +251,20 @@ def _ensure_support_messages_table(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE support_messages ADD COLUMN is_read INTEGER NOT NULL DEFAULT 0")
 
 
+def _ensure_email_codes_table(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS email_codes (
+            email TEXT PRIMARY KEY,
+            code_hash TEXT NOT NULL,
+            expires_at TEXT NOT NULL,
+            attempts INTEGER NOT NULL DEFAULT 0,
+            last_sent_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+
+
 def init_db() -> None:
     with closing(connect()) as conn:
         _ensure_users_table(conn)
@@ -260,6 +275,7 @@ def init_db() -> None:
         _ensure_vpn_keys_table(conn)
         _ensure_referrals_table(conn)
         _ensure_support_messages_table(conn)
+        _ensure_email_codes_table(conn)
         conn.commit()
 
     if settings.owner_id:
@@ -332,6 +348,79 @@ def add_user(
                 (referred_by, user_id),
             )
             conn.commit()
+
+
+def email_to_user_id(email: str) -> int:
+    """Deterministic synthetic user_id for an e-mail account.
+
+    Negative so it never collides with real (positive) Telegram ids.
+    """
+    import hashlib
+
+    digest = hashlib.sha256(email.strip().lower().encode("utf-8")).hexdigest()
+    return -(int(digest[:15], 16) % (10 ** 15) + 1)
+
+
+def get_or_create_email_user(email: str) -> int:
+    """Return the synthetic user_id for an e-mail account, creating it if needed."""
+    email = email.strip().lower()
+    user_id = email_to_user_id(email)
+    add_user(user_id, None)
+    with closing(connect()) as conn:
+        conn.execute("UPDATE users SET email = ? WHERE user_id = ?", (email, user_id))
+        conn.commit()
+    return user_id
+
+
+def get_user_email(user_id: int) -> str | None:
+    with closing(connect()) as conn:
+        row = conn.execute("SELECT email FROM users WHERE user_id = ?", (user_id,)).fetchone()
+    return (row["email"] if row else None) or None
+
+
+def set_email_code(email: str, code_hash: str, expires_at: str) -> None:
+    email = email.strip().lower()
+    with closing(connect()) as conn:
+        conn.execute(
+            """
+            INSERT INTO email_codes (email, code_hash, expires_at, attempts, last_sent_at)
+            VALUES (?, ?, ?, 0, CURRENT_TIMESTAMP)
+            ON CONFLICT(email) DO UPDATE SET
+                code_hash=excluded.code_hash,
+                expires_at=excluded.expires_at,
+                attempts=0,
+                last_sent_at=CURRENT_TIMESTAMP
+            """,
+            (email, code_hash, expires_at),
+        )
+        conn.commit()
+
+
+def get_email_code(email: str) -> dict[str, Any] | None:
+    with closing(connect()) as conn:
+        row = conn.execute(
+            "SELECT * FROM email_codes WHERE email = ?", (email.strip().lower(),)
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def increment_email_attempts(email: str) -> int:
+    with closing(connect()) as conn:
+        conn.execute(
+            "UPDATE email_codes SET attempts = attempts + 1 WHERE email = ?",
+            (email.strip().lower(),),
+        )
+        conn.commit()
+        row = conn.execute(
+            "SELECT attempts FROM email_codes WHERE email = ?", (email.strip().lower(),)
+        ).fetchone()
+    return int(row["attempts"]) if row else 0
+
+
+def delete_email_code(email: str) -> None:
+    with closing(connect()) as conn:
+        conn.execute("DELETE FROM email_codes WHERE email = ?", (email.strip().lower(),))
+        conn.commit()
 
 
 def get_user(user_id: int) -> dict[str, Any]:
@@ -549,7 +638,7 @@ def get_trial(user_id: int) -> dict[str, Any] | None:
     return row_to_dict(row)
 
 
-def activate_trial_days(user_id: int, duration_days: int = 2) -> dict[str, Any]:
+def activate_trial_days(user_id: int, duration_days: int = 3) -> dict[str, Any]:
     user = get_user(user_id)
     existing_vpn_key = get_vpn_key(user_id)
     trial = get_trial(user_id)
