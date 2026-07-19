@@ -378,6 +378,42 @@ def get_user_email(user_id: int) -> str | None:
     return (row["email"] if row else None) or None
 
 
+def get_user_by_email(email: str) -> dict[str, Any] | None:
+    """Look up an account by e-mail. If both a real Telegram account and a
+    synthetic web-only account (negative user_id) share the e-mail, the real
+    account wins — it's the authoritative identity a linked e-mail should log into.
+    """
+    email = email.strip().lower()
+    with closing(connect()) as conn:
+        rows = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchall()
+    if not rows:
+        return None
+    for row in rows:
+        if int(row["user_id"]) > 0:
+            return dict(row)
+    return dict(rows[0])
+
+
+def set_user_email(user_id: int, email: str) -> None:
+    """Link `email` to `user_id` (used by the bot's profile flow).
+
+    Rejects if the e-mail is already linked to a DIFFERENT real (positive
+    user_id) account — one e-mail can authenticate at most one real account.
+    A synthetic web-only account with the same e-mail is fine to "adopt":
+    it just means a past web-only order becomes reachable from Telegram too.
+    """
+    email = email.strip().lower()
+    with closing(connect()) as conn:
+        row = conn.execute(
+            "SELECT user_id FROM users WHERE email = ? AND user_id != ?",
+            (email, user_id),
+        ).fetchone()
+        if row and int(row["user_id"]) > 0:
+            raise ValueError("Эта почта уже привязана к другому аккаунту")
+        conn.execute("UPDATE users SET email = ? WHERE user_id = ?", (email, user_id))
+        conn.commit()
+
+
 def set_email_code(email: str, code_hash: str, expires_at: str) -> None:
     email = email.strip().lower()
     with closing(connect()) as conn:

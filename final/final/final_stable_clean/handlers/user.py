@@ -1,5 +1,7 @@
 ﻿from __future__ import annotations
 
+import re
+
 from aiogram import F, Router
 from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
@@ -23,19 +25,26 @@ from database import (
     get_role,
     get_trial,
     get_user,
+    get_user_by_email,
+    get_user_email,
     get_vpn_key,
     is_banned,
+    set_user_email,
     use_promo,
 )
+from email_otp import request_code, verify_code
 from payments import check_payment, create_payment_for_tariff
 from vpn import build_download_name
 
 router = Router()
 TRIAL_CHANNEL_URL = "https://t.me/VelariumVPNchannel"
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
 class UserStates(StatesGroup):
     waiting_for_promo = State()
+    waiting_for_email = State()
+    waiting_for_email_code = State()
 
 
 def support_url() -> str:
@@ -76,6 +85,18 @@ def main_menu(user_id: int) -> InlineKeyboardMarkup:
 def back_to_main_markup(user_id: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
+            [InlineKeyboardButton(text="🔙 Назад", callback_data="back_main")],
+            [InlineKeyboardButton(text="📞 Поддержка", url=support_url())],
+        ]
+    )
+
+
+def profile_markup(user_id: int) -> InlineKeyboardMarkup:
+    email = get_user_email(user_id)
+    email_btn_text = "📧 Изменить почту" if email else "📧 Привязать почту для входа на сайт"
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text=email_btn_text, callback_data="email_link")],
             [InlineKeyboardButton(text="🔙 Назад", callback_data="back_main")],
             [InlineKeyboardButton(text="📞 Поддержка", url=support_url())],
         ]
@@ -130,6 +151,8 @@ def profile_text(user_id: int) -> str:
     trial_status = "не активен"
     if trial and trial.get("expire_at") and not trial.get("revoked_at"):
         trial_status = f"активен до {trial['expire_at']}"
+    email = get_user_email(user_id)
+    email_line = email if email else "не привязана"
     return (
         "🔑 Velarium VPN — личный кабинет\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
@@ -138,7 +161,8 @@ def profile_text(user_id: int) -> str:
         f"Баланс: {balance}₽\n"
         f"Подписка до: {subscription}\n"
         f"Пробный период: {trial_status}\n"
-        f"VPN ключ: {key_value}"
+        f"VPN ключ: {key_value}\n"
+        f"Почта для входа на сайт: {email_line}"
     )
 
 
@@ -232,7 +256,95 @@ async def profile(callback: CallbackQuery) -> None:
     await callback.answer()
     await callback.message.edit_text(
         profile_text(callback.from_user.id),
+        reply_markup=profile_markup(callback.from_user.id),
+    )
+
+
+@router.callback_query(F.data == "email_link")
+async def email_link_start(callback: CallbackQuery, state: FSMContext) -> None:
+    if not await _guard_user(callback):
+        return
+    await callback.answer()
+    await state.set_state(UserStates.waiting_for_email)
+    await callback.message.edit_text(
+        "📧 Привязка почты\n"
+        "━━━━━━━━━━━━━━━━━━━━\n\n"
+        "Эта почта будет открывать твой аккаунт при входе на сайт (тот же ключ, та же подписка).\n\n"
+        "Отправь адрес почты одним сообщением.",
         reply_markup=back_to_main_markup(callback.from_user.id),
+    )
+
+
+@router.message(UserStates.waiting_for_email)
+async def email_link_input(message: Message, state: FSMContext) -> None:
+    if not await _guard_user(message):
+        return
+
+    email = (message.text or "").strip().lower()
+    if not EMAIL_RE.match(email) or len(email) > 254:
+        await message.answer(
+            "❌ Похоже, это не почта. Отправь адрес в формате name@example.com.",
+            reply_markup=back_to_main_markup(message.from_user.id),
+        )
+        return
+
+    existing = get_user_by_email(email)
+    if existing and int(existing["user_id"]) > 0 and int(existing["user_id"]) != message.from_user.id:
+        await message.answer(
+            "❌ Эта почта уже привязана к другому аккаунту. Если это ошибка — напиши в поддержку.",
+            reply_markup=back_to_main_markup(message.from_user.id),
+        )
+        return
+
+    result = request_code(email)
+    if not result["ok"]:
+        await message.answer(
+            "⏳ Код уже отправлен на эту почту, подожди немного и попробуй снова.",
+            reply_markup=back_to_main_markup(message.from_user.id),
+        )
+        return
+
+    await state.update_data(pending_email=email)
+    await state.set_state(UserStates.waiting_for_email_code)
+
+    text = f"✅ Код отправлен на {email}.\n\nОтправь 6-значный код одним сообщением."
+    if "dev_code" in result:
+        text += f"\n\n(Dev-режим, SMTP не настроен: код — {result['dev_code']})"
+    await message.answer(text, reply_markup=back_to_main_markup(message.from_user.id))
+
+
+@router.message(UserStates.waiting_for_email_code)
+async def email_link_verify(message: Message, state: FSMContext) -> None:
+    if not await _guard_user(message):
+        return
+
+    data = await state.get_data()
+    email = data.get("pending_email")
+    if not email:
+        await state.clear()
+        await message.answer(
+            "❌ Сессия истекла, начни привязку почты заново.",
+            reply_markup=main_menu(message.from_user.id),
+        )
+        return
+
+    ok, error = verify_code(email, message.text or "")
+    if not ok:
+        await message.answer(f"❌ {error}", reply_markup=back_to_main_markup(message.from_user.id))
+        return
+
+    try:
+        set_user_email(message.from_user.id, email)
+    except ValueError as exc:
+        await state.clear()
+        await message.answer(f"❌ {exc}", reply_markup=main_menu(message.from_user.id))
+        return
+
+    await state.clear()
+    await message.answer(
+        "✅ Почта привязана!\n\n"
+        f"Теперь на сайте можно войти этой же почтой ({email}) — откроется этот же аккаунт.",
+        reply_markup=main_menu(message.from_user.id),
     )
 
 
