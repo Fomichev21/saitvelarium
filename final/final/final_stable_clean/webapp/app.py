@@ -44,7 +44,7 @@ app = FastAPI(title="Velarium VPN Cabinet", lifespan=lifespan)
 @app.middleware("http")
 async def no_cache_static(request, call_next):
     response = await call_next(request)
-    if request.url.path.startswith("/static") or request.url.path in ("/", "/app", "/admin", "/checkout"):
+    if request.url.path.startswith("/static") or request.url.path in ("/", "/app", "/admin", "/checkout", "/profile"):
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     return response
 
@@ -89,6 +89,11 @@ def public_config() -> JSONResponse:
 @app.api_route("/checkout", methods=["GET", "HEAD"])
 def checkout_page() -> FileResponse:
     return FileResponse(STATIC_DIR / "checkout.html")
+
+
+@app.api_route("/profile", methods=["GET", "HEAD"])
+def profile_page() -> FileResponse:
+    return FileResponse(STATIC_DIR / "profile.html")
 
 
 @app.api_route("/", methods=["GET", "HEAD"])

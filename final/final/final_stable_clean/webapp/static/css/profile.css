@@ -1,0 +1,80 @@
+/* ===== Velarium Profile ===== */
+.pr-header-actions { display: flex; align-items: center; gap: 10px; }
+
+.pr-main { max-width: 1080px; padding-top: 40px; padding-bottom: 60px; }
+
+/* Login gate */
+.pr-gate { display: flex; justify-content: center; padding: 30px 0 10px; }
+.pr-gate-card { width: 100%; max-width: 440px; padding: 32px; }
+.pr-gate-note { text-align: center; color: var(--text-faint); font-size: 13.5px; margin: 22px 0 0; }
+.pr-gate-note a { color: var(--accent-2); font-weight: 600; }
+
+/* Greeting */
+.pr-greeting { text-align: center; margin-bottom: 30px; }
+.pr-greeting .co-h1 { font-size: clamp(26px, 3.2vw, 32px); }
+#pr-name { color: var(--accent-2); }
+
+/* Grid */
+.pr-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 20px; }
+.pr-card { padding: 24px; }
+.pr-card-head { margin-bottom: 16px; }
+.pr-card-head h3 { font-family: var(--font-head); font-size: 17px; margin: 0; }
+
+/* Subscription card */
+.pr-sub-card { grid-column: 1 / -1; background: linear-gradient(150deg, rgba(255, 59, 59, 0.1), var(--card)); border-color: var(--border-strong); }
+.pr-sub-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.pr-sub-badge { display: inline-flex; align-items: center; gap: 7px; font-family: var(--font-head); font-size: 12.5px; font-weight: 700;
+  padding: 5px 12px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.04em; }
+.pr-sub-badge.active { color: var(--success); background: rgba(95, 227, 161, 0.12); border: 1px solid rgba(95, 227, 161, 0.3); }
+.pr-sub-badge.trial { color: #ffcf4a; background: rgba(255, 207, 74, 0.12); border: 1px solid rgba(255, 207, 74, 0.3); }
+.pr-sub-badge.none { color: var(--text-faint); background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border); }
+.pr-sub-days { color: var(--text-dim); font-size: 13.5px; }
+.pr-sub-title { font-size: clamp(22px, 3vw, 28px); margin: 4px 0 14px; }
+.pr-sub-bar { height: 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.06); overflow: hidden; margin-bottom: 12px; }
+.pr-sub-bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent-2), var(--accent-deep)); transition: width 0.6s ease; width: 0%; }
+.pr-sub-desc { color: var(--text-dim); font-size: 14.5px; margin: 0 0 20px; }
+
+/* Key row (VPN + referral share this look) */
+.pr-key-row { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+.pr-key-value { flex: 1; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px; color: var(--text);
+  background: rgba(0, 0, 0, 0.25); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 11px 13px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pr-qr-wrap { display: flex; justify-content: center; margin-bottom: 18px; }
+.pr-qr-wrap img { width: 150px; height: 150px; border-radius: 12px; background: #fff; padding: 8px; }
+.pr-apps-title { color: var(--text-dim); font-size: 13.5px; margin: 0 0 12px; }
+.pr-apps-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.pr-app { display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 12px 6px; text-align: center;
+  border-radius: var(--radius-md); border: 1px solid var(--border); background: rgba(255, 255, 255, 0.02); transition: transform 0.2s ease, border-color 0.2s ease; }
+.pr-app:hover { transform: translateY(-2px); border-color: var(--border-strong); }
+.pr-app img { width: 34px; height: 34px; border-radius: 9px; object-fit: cover; }
+.pr-app span { font-family: var(--font-head); font-size: 12.5px; font-weight: 600; }
+
+/* Referral */
+.pr-referral-desc { color: var(--text-dim); font-size: 14px; margin: 0 0 16px; }
+.pr-ref-stats { display: flex; gap: 24px; }
+.pr-ref-stats div { display: flex; flex-direction: column; }
+.pr-ref-stats b { font-family: var(--font-head); font-size: 22px; font-weight: 700; }
+.pr-ref-stats span { color: var(--text-faint); font-size: 12.5px; }
+
+/* Payment history */
+.pr-history-card { grid-column: 1 / -1; }
+.pr-history-list { display: flex; flex-direction: column; gap: 10px; }
+.pr-history-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border); font-size: 14px; }
+.pr-history-status { width: 20px; text-align: center; flex-shrink: 0; }
+.pr-history-status.paid { color: var(--success); }
+.pr-history-status.pending { color: #ffcf4a; }
+.pr-history-status.failed { color: var(--text-faint); }
+.pr-history-main { flex: 1; color: var(--text); }
+.pr-history-date { color: var(--text-faint); font-size: 12.5px; }
+.pr-history-amount { font-family: var(--font-head); font-weight: 700; }
+.pr-empty { color: var(--text-faint); font-size: 14px; text-align: center; padding: 20px 0; }
+
+/* Support line */
+.pr-support { text-align: center; margin-top: 30px; color: var(--text-faint); font-size: 14px; }
+.pr-support a { color: var(--accent-2); font-weight: 600; }
+
+@media (max-width: 780px) {
+  .pr-grid { grid-template-columns: 1fr; }
+  .pr-header-actions .btn-ghost { padding: 8px 14px; font-size: 13px; }
+}

@@ -97,9 +97,11 @@ def me(current_user: CurrentUser = Depends(get_current_user)) -> dict[str, Any]:
         "username": user.get("username"),
         "first_name": user.get("first_name"),
         "last_name": user.get("last_name"),
+        "email": get_user_email(current_user.user_id),
         "balance": get_balance(current_user.user_id),
         "role": current_user.role,
         "created_at": user.get("created_at"),
+        "is_web_only": current_user.user_id < 0,
     }
 
 
