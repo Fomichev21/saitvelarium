@@ -3,15 +3,19 @@ from __future__ import annotations
 import hashlib
 import hmac
 import secrets
-import smtplib
-from email.message import EmailMessage
-from email.utils import formataddr
+
+import requests
 
 from config import settings
 
+RESEND_API_URL = "https://api.resend.com/emails"
+
 
 def is_configured() -> bool:
-    return bool(settings.smtp_user and settings.smtp_password)
+    # Resend's SMTP password IS the API key, so the same value already
+    # stored as SMTP_PASSWORD works as the Bearer token here — no .env
+    # change needed when switching transport.
+    return bool(settings.smtp_password)
 
 
 def generate_code() -> str:
@@ -30,34 +34,33 @@ def verify_code(email: str, code: str, code_hash: str) -> bool:
 
 def _sender() -> str:
     addr = settings.smtp_from or settings.smtp_user
-    return formataddr((settings.smtp_from_name or "Velarium VPN", addr))
+    name = settings.smtp_from_name or "Velarium VPN"
+    return f"{name} <{addr}>"
 
 
 def _send(to: str, subject: str, text: str, html: str | None = None) -> bool:
     if not is_configured():
         return False
 
-    message = EmailMessage()
-    message["Subject"] = subject
-    message["From"] = _sender()
-    message["To"] = to
-    message.set_content(text)
+    payload: dict = {"from": _sender(), "to": [to], "subject": subject, "text": text}
     if html:
-        message.add_alternative(html, subtype="html")
+        payload["html"] = html
 
     try:
-        if settings.smtp_port == 465:
-            with smtplib.SMTP_SSL(settings.smtp_host, settings.smtp_port, timeout=20) as server:
-                server.login(settings.smtp_user, settings.smtp_password)
-                server.send_message(message)
-        else:
-            with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=20) as server:
-                server.ehlo()
-                server.starttls()
-                server.login(settings.smtp_user, settings.smtp_password)
-                server.send_message(message)
+        response = requests.post(
+            RESEND_API_URL,
+            headers={
+                "Authorization": f"Bearer {settings.smtp_password}",
+                "Content-Type": "application/json",
+            },
+            json=payload,
+            timeout=15,
+        )
+        if response.status_code >= 400:
+            print(f"[email] send failed to {to}: {response.status_code} {response.text}")
+            return False
         return True
-    except Exception as exc:  # noqa: BLE001 — never leak SMTP errors to the client
+    except Exception as exc:  # noqa: BLE001 — never leak API errors to the client
         print(f"[email] send failed to {to}: {exc}")
         return False
 
