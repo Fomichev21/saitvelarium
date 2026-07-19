@@ -394,13 +394,85 @@ def get_user_by_email(email: str) -> dict[str, Any] | None:
     return dict(rows[0])
 
 
+def merge_synthetic_account_into(real_user_id: int, synthetic_user_id: int) -> None:
+    """Migrate a synthetic web-only account's subscription/history into a real
+    Telegram account when the same e-mail is later linked from the bot — so a
+    purchase made on the website before ever opening the bot isn't stranded on
+    an id the person has no other way to reach.
+
+    No-op if `synthetic_user_id` isn't actually synthetic (negative) or equals
+    `real_user_id`.
+    """
+    if synthetic_user_id >= 0 or synthetic_user_id == real_user_id:
+        return
+
+    with closing(connect()) as conn:
+        synthetic = conn.execute("SELECT * FROM users WHERE user_id = ?", (synthetic_user_id,)).fetchone()
+        real = conn.execute("SELECT * FROM users WHERE user_id = ?", (real_user_id,)).fetchone()
+        if not synthetic or not real:
+            return
+
+        # Subscription: keep whichever expires later.
+        if synthetic["subscription_until"] and (
+            not real["subscription_until"] or synthetic["subscription_until"] > real["subscription_until"]
+        ):
+            conn.execute(
+                "UPDATE users SET subscription_until = ? WHERE user_id = ?",
+                (synthetic["subscription_until"], real_user_id),
+            )
+
+        # Balance: combine.
+        combined_balance = int(real["balance"] or 0) + int(synthetic["balance"] or 0)
+        conn.execute("UPDATE users SET balance = ? WHERE user_id = ?", (combined_balance, real_user_id))
+
+        # Payment history: all reassigned to the real account.
+        conn.execute("UPDATE payments SET user_id = ? WHERE user_id = ?", (real_user_id, synthetic_user_id))
+
+        # VPN key: keep the real account's if it already has one, else adopt the synthetic one.
+        if conn.execute("SELECT 1 FROM vpn_keys WHERE user_id = ?", (real_user_id,)).fetchone():
+            conn.execute("DELETE FROM vpn_keys WHERE user_id = ?", (synthetic_user_id,))
+        else:
+            conn.execute("UPDATE vpn_keys SET user_id = ? WHERE user_id = ?", (real_user_id, synthetic_user_id))
+
+        # Trial record: keep the real account's if present, else adopt the synthetic one.
+        if conn.execute("SELECT 1 FROM trials WHERE user_id = ?", (real_user_id,)).fetchone():
+            conn.execute("DELETE FROM trials WHERE user_id = ?", (synthetic_user_id,))
+        else:
+            conn.execute("UPDATE trials SET user_id = ? WHERE user_id = ?", (real_user_id, synthetic_user_id))
+
+        # Support chat history: reassigned.
+        conn.execute("UPDATE support_messages SET user_id = ? WHERE user_id = ?", (real_user_id, synthetic_user_id))
+
+        # Promo redemption history: reassign, skipping codes the real account already used
+        # (promo_usages has a UNIQUE(code, user_id) constraint).
+        promo_rows = conn.execute(
+            "SELECT code FROM promo_usages WHERE user_id = ?", (synthetic_user_id,)
+        ).fetchall()
+        for promo_row in promo_rows:
+            code = promo_row["code"]
+            already_used = conn.execute(
+                "SELECT 1 FROM promo_usages WHERE user_id = ? AND code = ?", (real_user_id, code)
+            ).fetchone()
+            if not already_used:
+                conn.execute(
+                    "UPDATE promo_usages SET user_id = ? WHERE user_id = ? AND code = ?",
+                    (real_user_id, synthetic_user_id, code),
+                )
+        conn.execute("DELETE FROM promo_usages WHERE user_id = ?", (synthetic_user_id,))
+
+        # Drop the now-empty synthetic account so e-mail lookups never resolve to it again.
+        conn.execute("DELETE FROM users WHERE user_id = ?", (synthetic_user_id,))
+        conn.commit()
+
+
 def set_user_email(user_id: int, email: str) -> None:
     """Link `email` to `user_id` (used by the bot's profile flow).
 
     Rejects if the e-mail is already linked to a DIFFERENT real (positive
     user_id) account — one e-mail can authenticate at most one real account.
-    A synthetic web-only account with the same e-mail is fine to "adopt":
-    it just means a past web-only order becomes reachable from Telegram too.
+    If a synthetic web-only account already used this e-mail, its
+    subscription/history is merged into `user_id` first (see
+    merge_synthetic_account_into) so nothing purchased on the website is lost.
     """
     email = email.strip().lower()
     with closing(connect()) as conn:
@@ -408,8 +480,14 @@ def set_user_email(user_id: int, email: str) -> None:
             "SELECT user_id FROM users WHERE email = ? AND user_id != ?",
             (email, user_id),
         ).fetchone()
-        if row and int(row["user_id"]) > 0:
-            raise ValueError("Эта почта уже привязана к другому аккаунту")
+    other_id = int(row["user_id"]) if row else None
+
+    if other_id is not None and other_id > 0:
+        raise ValueError("Эта почта уже привязана к другому аккаунту")
+    if other_id is not None and other_id < 0:
+        merge_synthetic_account_into(user_id, other_id)
+
+    with closing(connect()) as conn:
         conn.execute("UPDATE users SET email = ? WHERE user_id = ?", (email, user_id))
         conn.commit()
 

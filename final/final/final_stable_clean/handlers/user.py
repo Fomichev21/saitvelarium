@@ -343,7 +343,8 @@ async def email_link_verify(message: Message, state: FSMContext) -> None:
     await state.clear()
     await message.answer(
         "✅ Почта привязана!\n\n"
-        f"Теперь на сайте можно войти этой же почтой ({email}) — откроется этот же аккаунт.",
+        f"Теперь на сайте можно войти этой же почтой ({email}) — откроется этот же аккаунт.\n"
+        "Если ты уже покупал подписку на сайте по этой почте — она уже перенесена сюда, проверь «Моя подписка».",
         reply_markup=main_menu(message.from_user.id),
     )
 
